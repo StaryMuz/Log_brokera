@@ -30,9 +30,14 @@ def on_connect(client, userdata, flags, reason_code, properties):
         print(f"Chyba připojení: {reason_code}")
 
 def on_message(client, userdata, msg):
+    # ignorujeme retained zprávy (stav brokeru)
+    if msg.retain:
+        return
+
     payload = msg.payload.decode(errors="ignore").strip()
     if payload not in ("0", "1"):
         return
+
     ts = datetime.now(TIMEZONE).strftime("%Y-%m-%d %H:%M:%S")
     with open(RUN_LOG, "a", newline="", encoding="utf-8") as f:
         csv.writer(f, delimiter=";").writerow([ts, msg.topic, payload])
