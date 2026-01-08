@@ -3,7 +3,10 @@ name: MQTT CSV Logger
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 * * * *'   # každý celý začátek hodiny
+    - cron: '0 * * * *'
+
+permissions:
+  contents: write   # ← KRITICKÉ
 
 jobs:
   mqtt_logger:
@@ -19,7 +22,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: true
+          persist-credentials: false   # ← důležité
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -34,13 +37,12 @@ jobs:
         run: |
           python mqtt_logger.py
 
-      - name: Commit merged CSV
+      - name: Commit and push CSV
         run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git add mqtt_log_*.csv
           git diff --cached --quiet || git commit -m "Update MQTT daily log"
 
-          # push přes GITHUB_TOKEN
           git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
