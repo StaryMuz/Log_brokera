@@ -1,5 +1,4 @@
-name: MQTT CSV Logger
-
+name: mqtt-logger
 on:
   schedule:
     - cron: '0 * * * *'   # každou celou hodinu
