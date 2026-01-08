@@ -1,20 +1,18 @@
 name: mqtt-logger
-on:
-  schedule:
-    - cron: '0 * * * *'   # každou celou hodinu
-  workflow_dispatch:
 
-concurrency:
-  group: mqtt-logger
-  cancel-in-progress: true   # nový run ukončí starý
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 * * * *'   # každou hodinu
 
 jobs:
-  log:
+  mqtt_logger:
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+
+    timeout-minutes: 65   # korektní ukončení jobu
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Python
@@ -27,17 +25,11 @@ jobs:
           pip install paho-mqtt pytz
 
       - name: Run MQTT logger
-        env:
-          MQTT_HOST: maqiatto.com
-          MQTT_PORT: 1883
-          MQTT_USER: ${{ secrets.MQTT_USER }}
-          MQTT_PASS: ${{ secrets.MQTT_PASS }}
-          MQTT_TOPIC: "starymuz@centrum.cz/rele/1/set"
         run: |
           python mqtt_logger.py
 
       - name: Upload CSV log
         uses: actions/upload-artifact@v4
         with:
-          name: mqtt-log
-          path: mqtt_log.csv
+          name: mqtt-csv
+          path: mqtt_log_*.csv
