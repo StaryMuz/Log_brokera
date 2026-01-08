@@ -3,7 +3,7 @@ name: MQTT CSV Logger
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 * * * *'   # každou hodinu
+    - cron: '0 * * * *'   # každý celý začátek hodiny
 
 jobs:
   mqtt_logger:
@@ -35,11 +35,9 @@ jobs:
           python mqtt_logger.py
 
       - name: Commit merged CSV
-        if: success()
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-
           git add mqtt_log_24h.csv
           git diff --cached --quiet || git commit -m "Update MQTT 24h log"
           git push
