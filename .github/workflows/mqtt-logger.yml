@@ -25,7 +25,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install paho-mqtt
+          pip install paho-mqtt pytz
 
       - name: Run MQTT logger
         env:
