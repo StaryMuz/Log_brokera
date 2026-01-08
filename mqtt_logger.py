@@ -1,93 +1,109 @@
 import csv
-import os
 import time
+import glob
+import os
 from datetime import datetime, timedelta
 import pytz
-import glob
 import paho.mqtt.client as mqtt
 
-# === MQTT nastavení ===
-HOST  = os.environ["MQTT_HOST"]
-PORT  = int(os.environ["MQTT_PORT"])
-USER  = os.environ["MQTT_USER"]
-PASS  = os.environ["MQTT_PASS"]
-TOPIC = os.environ["MQTT_TOPIC"]
+# ====== NAČTENÍ SECRETŮ (POVINNÉ) ======
 
-# === Lokální časová zóna ===
-LOCAL_TZ = pytz.timezone("Europe/Prague")
+MQTT_BROKER = os.environ["MQTT_HOST"]
+MQTT_USER   = os.environ["MQTT_USER"]
+MQTT_PASS   = os.environ["MQTT_PASS"]
 
-# === Logování ===
-RUN_LOG = f"mqtt_log_{int(time.time())}.csv"  # dočasný log pro aktuální run
-MERGED_LOG = "mqtt_log_24h.csv"              # sloučený 24h log
+MQTT_PORT  = 1883
+MQTT_TOPIC = "starymuz@centrum.cz/rele/1/set"
 
-# === Délka runu v sekundách ===
-END_TIME = time.time() + 55 * 60  # cca 55 minut
+TIMEZONE = pytz.timezone("Europe/Prague")
 
-# --- MQTT callbacky ---
-def on_connect(client, userdata, flags, rc):
-    client.subscribe(TOPIC)
+RUN_LOG    = f"mqtt_log_{datetime.now(TIMEZONE).strftime('%Y-%m-%d_%H-%M-%S')}.csv"
+MERGED_LOG = "mqtt_log_24h.csv"
+
+# ====== CALLBACKY ======
+
+def on_connect(client, userdata, flags, reason_code, properties):
+    if reason_code == 0:
+        print("Připojeno k MQTT brokeru")
+        client.subscribe(MQTT_TOPIC)
+    else:
+        print(f"Chyba připojení: {reason_code}")
 
 def on_message(client, userdata, msg):
-    payload = msg.payload.decode(errors="replace").strip()
+    payload = msg.payload.decode(errors="ignore").strip()
+
     if payload not in ("0", "1"):
         return
 
-    local_time = datetime.now(LOCAL_TZ).strftime("%Y-%m-%d %H:%M:%S")
+    timestamp = datetime.now(TIMEZONE)
+
     with open(RUN_LOG, "a", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerow([local_time, msg.topic, payload])
+        writer = csv.writer(f, delimiter=";")
+        writer.writerow([
+            timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+            msg.topic,
+            payload
+        ])
 
-# --- MQTT client setup ---
-client = mqtt.Client()
-client.username_pw_set(USER, PASS)
-client.on_connect = on_connect
-client.on_message = on_message
+    print(f"{timestamp} | {msg.topic} | {payload}")
 
-client.connect(HOST, PORT, 60)
+# ====== SLOUČENÍ POSLEDNÍCH 24 H ======
 
-# --- Hlavička CSV pro aktuální run ---
-if not os.path.exists(RUN_LOG):
-    with open(RUN_LOG, "w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerow(["local_time", "topic", "value"])
+def merge_last_24h():
+    cutoff = datetime.now(TIMEZONE) - timedelta(hours=24)
+    rows = []
 
-client.loop_start()
+    for file in glob.glob("mqtt_log_*.csv"):
+        if file == MERGED_LOG:
+            continue
 
-try:
-    while time.time() < END_TIME:
-        time.sleep(1)
-finally:
-    client.loop_stop()
-    client.disconnect()
-
-# --- Sloučení do 24hodinového CSV ---
-# vybere všechny soubory mqtt_log_*.csv z posledních 24h
-now = datetime.now(LOCAL_TZ)
-start_window = now - timedelta(hours=24)
-
-files = glob.glob("mqtt_log_*.csv")
-all_rows = []
-
-for file in files:
-    try:
-        with open(file, newline="", encoding="utf-8") as f:
-            reader = csv.reader(f)
-            header = next(reader, None)  # přeskočí hlavičku
+        with open(file, "r", encoding="utf-8") as f:
+            reader = csv.reader(f, delimiter=";")
             for row in reader:
-                if len(row) < 3:
+                if not row or row[0] == "čas":
                     continue
-                row_time = datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S")
-                row_time = LOCAL_TZ.localize(row_time)
-                if row_time >= start_window:
-                    all_rows.append(row)
-    except Exception as e:
-        print(f"Chyba při čtení {file}: {e}")
 
-# seřadit podle času
-all_rows.sort(key=lambda r: r[0])
+                ts = TIMEZONE.localize(
+                    datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S")
+                )
+                if ts >= cutoff:
+                    rows.append(row)
 
-# zapsat do sloučeného logu
-with open(MERGED_LOG, "w", newline="", encoding="utf-8") as f:
-    writer = csv.writer(f)
-    writer.writerow(["local_time", "topic", "value"])
-    writer.writerows(all_rows)
+    rows.sort(key=lambda r: r[0])
+
+    with open(MERGED_LOG, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f, delimiter=";")
+        writer.writerow(["čas", "topic", "hodnota"])
+        writer.writerows(rows)
+
+# ====== HLAVNÍ ======
+
+def main():
+    # vytvoření CSV pro tento run
+    with open(RUN_LOG, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f, delimiter=";")
+        writer.writerow(["čas", "topic", "hodnota"])
+
+    client = mqtt.Client(
+        callback_api_version=mqtt.CallbackAPIVersion.VERSION2
+    )
+    client.username_pw_set(MQTT_USER, MQTT_PASS)
+    client.on_connect = on_connect
+    client.on_message = on_message
+
+    client.connect(MQTT_BROKER, MQTT_PORT, keepalive=60)
+    client.loop_start()
+
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        client.loop_stop()
+        client.disconnect()
+        merge_last_24h()
+        print("Logger ukončen, CSV sloučeno")
+
+if __name__ == "__main__":
+    main()
