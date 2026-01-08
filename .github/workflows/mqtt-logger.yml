@@ -33,7 +33,7 @@ jobs:
           MQTT_PORT: 1883
           MQTT_USER: ${{ secrets.MQTT_USER }}
           MQTT_PASS: ${{ secrets.MQTT_PASS }}
-          MQTT_TOPIC: "#"
+          MQTT_TOPIC: "starymuz@centrum.cz/rele/1/set"
         run: |
           python mqtt_logger.py
 
