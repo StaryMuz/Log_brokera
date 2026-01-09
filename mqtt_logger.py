@@ -93,6 +93,10 @@ def main():
         print("Běžící hodina téměř končí – run se nespustí")
         return
 
+    # ✅ vynucené vytvoření dnešního logu ihned po startu
+    rotate_logs_if_needed()
+    ensure_today_header()
+
     log_run_marker("RUN START")
 
     client = mqtt.Client(
