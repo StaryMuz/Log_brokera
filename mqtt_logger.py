@@ -20,22 +20,15 @@ TODAY_FILE = "mqtt_log_dnes.csv"
 
 # ====== SOUBOROVÁ LOGIKA ======
 def rotate_logs_if_needed():
-    """Při prvním zápisu nového dne:
-       - dnešní → včerejší (datovaný)
-       - starší než včerejší smažeme
-    """
     now = datetime.now(TIMEZONE)
     today_str = now.strftime("%Y-%m-%d")
     yesterday_str = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 
-    # pokud dnešní soubor existuje a je z minulého dne → rotace
     if os.path.exists(TODAY_FILE):
         mtime = datetime.fromtimestamp(os.path.getmtime(TODAY_FILE), TIMEZONE)
         if mtime.strftime("%Y-%m-%d") != today_str:
-            yesterday_file = f"mqtt_log_{mtime.strftime('%Y-%m-%d')}.csv"
-            os.replace(TODAY_FILE, yesterday_file)
+            os.replace(TODAY_FILE, f"mqtt_log_{mtime.strftime('%Y-%m-%d')}.csv")
 
-    # smažeme vše kromě dneška a včerejška
     for f in os.listdir("."):
         if f.startswith("mqtt_log_") and f.endswith(".csv"):
             if f not in (TODAY_FILE, f"mqtt_log_{yesterday_str}.csv"):
@@ -51,6 +44,13 @@ def ensure_today_header():
                 ["čas", "topic", "hodnota"]
             )
 
+def log_run_marker(text):
+    rotate_logs_if_needed()
+    ensure_today_header()
+    ts = datetime.now(TIMEZONE).strftime("%Y-%m-%d %H:%M:%S")
+    with open(TODAY_FILE, "a", newline="", encoding="utf-8") as f:
+        csv.writer(f, delimiter=";").writerow([ts, "", text])
+
 # ====== MQTT CALLBACKY ======
 def on_connect(client, userdata, flags, reason_code, properties):
     if reason_code == 0:
@@ -60,7 +60,6 @@ def on_connect(client, userdata, flags, reason_code, properties):
         print(f"Chyba připojení: {reason_code}")
 
 def on_message(client, userdata, msg):
-    # ignorujeme retained zprávy (stav brokeru)
     if msg.retain:
         return
 
@@ -72,9 +71,10 @@ def on_message(client, userdata, msg):
     ensure_today_header()
 
     ts = datetime.now(TIMEZONE).strftime("%Y-%m-%d %H:%M:%S")
-
     with open(TODAY_FILE, "a", newline="", encoding="utf-8") as f:
-        csv.writer(f, delimiter=";").writerow([ts, msg.topic, payload])
+        csv.writer(f, delimiter=";").writerow(
+            [ts, msg.topic, payload]
+        )
 
 # ====== ČASOVÁ LOGIKA ======
 def seconds_until_hour_end():
@@ -93,6 +93,8 @@ def main():
         print("Běžící hodina téměř končí – run se nespustí")
         return
 
+    log_run_marker("RUN START")
+
     client = mqtt.Client(
         callback_api_version=mqtt.CallbackAPIVersion.VERSION2
     )
@@ -107,6 +109,8 @@ def main():
 
     client.loop_stop()
     client.disconnect()
+
+    log_run_marker("RUN END")
     print("Run korektně ukončen")
 
 if __name__ == "__main__":
