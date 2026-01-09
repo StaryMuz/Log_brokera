@@ -1,6 +1,5 @@
 import csv
 import time
-import glob
 import os
 from datetime import datetime, timedelta
 import pytz
@@ -15,13 +14,44 @@ MQTT_PORT  = 1883
 MQTT_TOPIC = "starymuz@centrum.cz/rele/1/set"
 
 TIMEZONE = pytz.timezone("Europe/Prague")
+SAFETY_SECONDS = 60
 
-RUN_LOG    = f"mqtt_log_{datetime.now(TIMEZONE).strftime('%Y-%m-%d_%H-%M-%S')}.csv"
-MERGED_LOG = "mqtt_log_24h.csv"
+TODAY_FILE = "mqtt_log_dnes.csv"
 
-SAFETY_SECONDS = 60   # rezerva před další hodinou
+# ====== SOUBOROVÁ LOGIKA ======
+def rotate_logs_if_needed():
+    """Při prvním zápisu nového dne:
+       - dnešní → včerejší (datovaný)
+       - starší než včerejší smažeme
+    """
+    now = datetime.now(TIMEZONE)
+    today_str = now.strftime("%Y-%m-%d")
+    yesterday_str = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 
-# ====== CALLBACKY ======
+    # pokud dnešní soubor existuje a je z minulého dne → rotace
+    if os.path.exists(TODAY_FILE):
+        mtime = datetime.fromtimestamp(os.path.getmtime(TODAY_FILE), TIMEZONE)
+        if mtime.strftime("%Y-%m-%d") != today_str:
+            yesterday_file = f"mqtt_log_{mtime.strftime('%Y-%m-%d')}.csv"
+            os.replace(TODAY_FILE, yesterday_file)
+
+    # smažeme vše kromě dneška a včerejška
+    for f in os.listdir("."):
+        if f.startswith("mqtt_log_") and f.endswith(".csv"):
+            if f not in (TODAY_FILE, f"mqtt_log_{yesterday_str}.csv"):
+                try:
+                    os.remove(f)
+                except:
+                    pass
+
+def ensure_today_header():
+    if not os.path.exists(TODAY_FILE):
+        with open(TODAY_FILE, "w", newline="", encoding="utf-8") as f:
+            csv.writer(f, delimiter=";").writerow(
+                ["čas", "topic", "hodnota"]
+            )
+
+# ====== MQTT CALLBACKY ======
 def on_connect(client, userdata, flags, reason_code, properties):
     if reason_code == 0:
         client.subscribe(MQTT_TOPIC)
@@ -38,53 +68,34 @@ def on_message(client, userdata, msg):
     if payload not in ("0", "1"):
         return
 
+    rotate_logs_if_needed()
+    ensure_today_header()
+
     ts = datetime.now(TIMEZONE).strftime("%Y-%m-%d %H:%M:%S")
-    with open(RUN_LOG, "a", newline="", encoding="utf-8") as f:
+
+    with open(TODAY_FILE, "a", newline="", encoding="utf-8") as f:
         csv.writer(f, delimiter=";").writerow([ts, msg.topic, payload])
 
 # ====== ČASOVÁ LOGIKA ======
 def seconds_until_hour_end():
     now = datetime.now(TIMEZONE)
-    next_hour = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+    next_hour = (now + timedelta(hours=1)).replace(
+        minute=0, second=0, microsecond=0
+    )
     return max(0, int((next_hour - now).total_seconds()) - SAFETY_SECONDS)
-
-# ====== SLOUČENÍ ======
-def merge_last_24h():
-    cutoff = datetime.now(TIMEZONE) - timedelta(hours=24)
-    rows = []
-
-    for file in glob.glob("mqtt_log_*.csv"):
-        if file == MERGED_LOG:
-            continue
-        with open(file, encoding="utf-8") as f:
-            for r in csv.reader(f, delimiter=";"):
-                if not r or r[0] == "čas":
-                    continue
-                ts = TIMEZONE.localize(datetime.strptime(r[0], "%Y-%m-%d %H:%M:%S"))
-                if ts >= cutoff:
-                    rows.append(r)
-
-    rows.sort(key=lambda r: r[0])
-
-    with open(MERGED_LOG, "w", newline="", encoding="utf-8") as f:
-        w = csv.writer(f, delimiter=";")
-        w.writerow(["čas", "topic", "hodnota"])
-        w.writerows(rows)
 
 # ====== MAIN ======
 def main():
-    # vytvoření CSV pro tento run
-    with open(RUN_LOG, "w", newline="", encoding="utf-8") as f:
-        csv.writer(f, delimiter=";").writerow(["čas", "topic", "hodnota"])
-
     run_seconds = seconds_until_hour_end()
     print(f"Poběžím {run_seconds} sekund")
 
     if run_seconds <= 0:
-        print("Běžící hodina téměř končí – ukončuji run")
+        print("Běžící hodina téměř končí – run se nespustí")
         return
 
-    client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
+    client = mqtt.Client(
+        callback_api_version=mqtt.CallbackAPIVersion.VERSION2
+    )
     client.username_pw_set(MQTT_USER, MQTT_PASS)
     client.on_connect = on_connect
     client.on_message = on_message
@@ -96,9 +107,7 @@ def main():
 
     client.loop_stop()
     client.disconnect()
-
-    merge_last_24h()
-    print("Run korektně ukončen a CSV sloučeno")
+    print("Run korektně ukončen")
 
 if __name__ == "__main__":
     main()
