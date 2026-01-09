@@ -3,7 +3,7 @@ name: MQTT CSV Logger
 on:
   workflow_dispatch:
   schedule:
-    - cron: '57 * * * *'
+    - cron: '51 * * * *'
 
 permissions:
   contents: write   # ← KRITICKÉ
