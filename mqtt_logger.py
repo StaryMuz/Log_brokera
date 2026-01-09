@@ -52,9 +52,14 @@ def log_run_marker(text):
         csv.writer(f, delimiter=";").writerow([ts, "", text])
 
 # ====== MQTT CALLBACKY ======
+subscribed = False  # ✅ jednorázové subscribe
+
 def on_connect(client, userdata, flags, reason_code, properties):
+    global subscribed
     if reason_code == 0:
-        client.subscribe(MQTT_TOPIC)
+        if not subscribed:
+            client.subscribe(MQTT_TOPIC)
+            subscribed = True
         print("Připojeno k MQTT brokeru")
     else:
         print(f"Chyba připojení: {reason_code}")
