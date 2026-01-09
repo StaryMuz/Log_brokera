@@ -80,8 +80,8 @@ def on_message(client, userdata, msg):
 def seconds_until_run_end():
     now = datetime.now(TIMEZONE)
 
-    run_end = now.replace(minute=50, second=0, microsecond=0)
-    if now.minute >= 50:
+    run_end = now.replace(minute=47, second=0, microsecond=0)
+    if now.minute >= 47:
         run_end += timedelta(hours=1)
 
     return max(0, int((run_end - now).total_seconds()) - SAFETY_SECONDS)
