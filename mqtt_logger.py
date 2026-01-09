@@ -88,7 +88,7 @@ def seconds_until_run_end():
 
 # ====== MAIN ======
 def main():
-    run_seconds = seconds_until_hour_end()
+    run_seconds = seconds_until_run_end()
     print(f"Poběžím {run_seconds} sekund")
 
     if run_seconds <= 0:
