@@ -77,12 +77,14 @@ def on_message(client, userdata, msg):
         )
 
 # ====== ČASOVÁ LOGIKA ======
-def seconds_until_hour_end():
+def seconds_until_run_end():
     now = datetime.now(TIMEZONE)
-    next_hour = (now + timedelta(hours=1)).replace(
-        minute=0, second=0, microsecond=0
-    )
-    return max(0, int((next_hour - now).total_seconds()) - SAFETY_SECONDS)
+
+    run_end = now.replace(minute=56, second=0, microsecond=0)
+    if now.minute >= 56:
+        run_end += timedelta(hours=1)
+
+    return max(0, int((run_end - now).total_seconds()) - SAFETY_SECONDS)
 
 # ====== MAIN ======
 def main():
