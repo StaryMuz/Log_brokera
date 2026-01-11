@@ -24,18 +24,24 @@ def rotate_logs_if_needed():
     today_str = now.strftime("%Y-%m-%d")
     yesterday_str = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 
+    yesterday_file = f"mqtt_log_{yesterday_str}.csv"
+
+    # Přesun dnešního souboru při změně dne
     if os.path.exists(TODAY_FILE):
         mtime = datetime.fromtimestamp(os.path.getmtime(TODAY_FILE), TIMEZONE)
         if mtime.strftime("%Y-%m-%d") != today_str:
             os.replace(TODAY_FILE, f"mqtt_log_{mtime.strftime('%Y-%m-%d')}.csv")
 
+    # WHITELIST – pouze tyto CSV smí zůstat
+    allowed = {TODAY_FILE, yesterday_file}
+
+    # Smazání všech ostatních CSV
     for f in os.listdir("."):
-        if f.startswith("mqtt_log_") and f.endswith(".csv"):
-            if f not in (TODAY_FILE, f"mqtt_log_{yesterday_str}.csv"):
-                try:
-                    os.remove(f)
-                except:
-                    pass
+        if f.endswith(".csv") and f not in allowed:
+            try:
+                os.remove(f)
+            except:
+                pass
 
 def ensure_today_header():
     if not os.path.exists(TODAY_FILE):
@@ -52,7 +58,7 @@ def log_run_marker(text):
         csv.writer(f, delimiter=";").writerow([ts, "", text])
 
 # ====== MQTT CALLBACKY ======
-subscribed = False  # ✅ jednorázové subscribe
+subscribed = False
 
 def on_connect(client, userdata, flags, reason_code, properties):
     global subscribed
@@ -61,8 +67,6 @@ def on_connect(client, userdata, flags, reason_code, properties):
             client.subscribe(MQTT_TOPIC)
             subscribed = True
         print("Připojeno k MQTT brokeru")
-    else:
-        print(f"Chyba připojení: {reason_code}")
 
 def on_message(client, userdata, msg):
     if msg.retain:
@@ -97,13 +101,10 @@ def main():
     print(f"Poběžím {run_seconds} sekund")
 
     if run_seconds <= 0:
-        print("Běžící hodina téměř končí – run se nespustí")
         return
 
-    # ✅ vynucené vytvoření dnešního logu ihned po startu
     rotate_logs_if_needed()
     ensure_today_header()
-
     log_run_marker("RUN START")
 
     client = mqtt.Client(
