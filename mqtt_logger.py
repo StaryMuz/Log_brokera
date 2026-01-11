@@ -10,8 +10,10 @@ MQTT_BROKER = os.environ["MQTT_HOST"]
 MQTT_USER   = os.environ["MQTT_USER"]
 MQTT_PASS   = os.environ["MQTT_PASS"]
 
-MQTT_PORT  = 1883
-MQTT_TOPIC = "starymuz@centrum.cz/rele/1/set"
+MQTT_PORT = 1883
+
+MQTT_TOPIC_SET = "starymuz@centrum.cz/rele/1/set"
+MQTT_TOPIC_GET = "starymuz@centrum.cz/rele/1/get"
 
 TIMEZONE = pytz.timezone("Europe/Prague")
 SAFETY_SECONDS = 60
@@ -24,20 +26,16 @@ def rotate_logs_if_needed():
     today_str = now.strftime("%Y-%m-%d")
     yesterday_str = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 
-    yesterday_file = f"mqtt_log_{yesterday_str}.csv"
-
-    # Přesun dnešního souboru při změně dne
     if os.path.exists(TODAY_FILE):
         mtime = datetime.fromtimestamp(os.path.getmtime(TODAY_FILE), TIMEZONE)
         if mtime.strftime("%Y-%m-%d") != today_str:
             os.replace(TODAY_FILE, f"mqtt_log_{mtime.strftime('%Y-%m-%d')}.csv")
 
-    # WHITELIST – pouze tyto CSV smí zůstat
-    allowed = {TODAY_FILE, yesterday_file}
-
-    # Smazání všech ostatních CSV
     for f in os.listdir("."):
-        if f.endswith(".csv") and f not in allowed:
+        if f.endswith(".csv") and f not in (
+            TODAY_FILE,
+            f"mqtt_log_{yesterday_str}.csv",
+        ):
             try:
                 os.remove(f)
             except:
@@ -58,15 +56,15 @@ def log_run_marker(text):
         csv.writer(f, delimiter=";").writerow([ts, "", text])
 
 # ====== MQTT CALLBACKY ======
-subscribed = False
-
 def on_connect(client, userdata, flags, reason_code, properties):
-    global subscribed
     if reason_code == 0:
-        if not subscribed:
-            client.subscribe(MQTT_TOPIC)
-            subscribed = True
+        client.subscribe([
+            (MQTT_TOPIC_SET, 0),
+            (MQTT_TOPIC_GET, 0),
+        ])
         print("Připojeno k MQTT brokeru")
+    else:
+        print(f"Chyba připojení: {reason_code}")
 
 def on_message(client, userdata, msg):
     if msg.retain:
@@ -76,21 +74,32 @@ def on_message(client, userdata, msg):
     if payload not in ("0", "1"):
         return
 
-    rotate_logs_if_needed()
-    ensure_today_header()
+    # ---- SET: zapisovat vždy ----
+    if msg.topic == MQTT_TOPIC_SET:
+        rotate_logs_if_needed()
+        ensure_today_header()
+        ts = datetime.now(TIMEZONE).strftime("%Y-%m-%d %H:%M:%S")
+        with open(TODAY_FILE, "a", newline="", encoding="utf-8") as f:
+            csv.writer(f, delimiter=";").writerow(
+                [ts, msg.topic, payload]
+            )
 
-    ts = datetime.now(TIMEZONE).strftime("%Y-%m-%d %H:%M:%S")
-    with open(TODAY_FILE, "a", newline="", encoding="utf-8") as f:
-        csv.writer(f, delimiter=";").writerow(
-            [ts, msg.topic, payload]
-        )
+    # ---- GET: zapisovat pouze hodnotu 1 ----
+    elif msg.topic == MQTT_TOPIC_GET and payload == "1":
+        rotate_logs_if_needed()
+        ensure_today_header()
+        ts = datetime.now(TIMEZONE).strftime("%Y-%m-%d %H:%M:%S")
+        with open(TODAY_FILE, "a", newline="", encoding="utf-8") as f:
+            csv.writer(f, delimiter=";").writerow(
+                [ts, msg.topic, payload]
+            )
 
 # ====== ČASOVÁ LOGIKA ======
 def seconds_until_run_end():
     now = datetime.now(TIMEZONE)
 
-    run_end = now.replace(minute=47, second=0, microsecond=0)
-    if now.minute >= 47:
+    run_end = now.replace(minute=51, second=0, microsecond=0)
+    if now.minute >= 51:
         run_end += timedelta(hours=1)
 
     return max(0, int((run_end - now).total_seconds()) - SAFETY_SECONDS)
@@ -101,6 +110,7 @@ def main():
     print(f"Poběžím {run_seconds} sekund")
 
     if run_seconds <= 0:
+        print("Běžící hodina téměř končí – run se nespustí")
         return
 
     rotate_logs_if_needed()
