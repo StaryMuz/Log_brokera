@@ -371,3 +371,12 @@
 2026-01-12 15:30:00;starymuz@centrum.cz/rele/1/set;0
 2026-01-12 15:45:00;starymuz@centrum.cz/rele/1/set;0
 2026-01-12 15:45:59;;RUN END
+2026-01-12 16:00:36;;RUN START
+2026-01-12 16:00:44;starymuz@centrum.cz/rele/1/get;1
+2026-01-12 16:01:11;starymuz@centrum.cz/rele/1/get;1
+2026-01-12 16:01:38;starymuz@centrum.cz/rele/1/get;1
+2026-01-12 16:02:01;starymuz@centrum.cz/rele/1/set;0
+2026-01-12 16:15:00;starymuz@centrum.cz/rele/1/set;0
+2026-01-12 16:30:00;starymuz@centrum.cz/rele/1/set;0
+2026-01-12 16:45:00;starymuz@centrum.cz/rele/1/set;0
+2026-01-12 16:46:00;;RUN END
