@@ -26,11 +26,13 @@ def rotate_logs_if_needed():
     today_str = now.strftime("%Y-%m-%d")
     yesterday_str = (now - timedelta(days=1)).strftime("%Y-%m-%d")
 
+    # 1️⃣ Přejmenování dnešního logu, pokud je z jiného dne
     if os.path.exists(TODAY_FILE):
         mtime = datetime.fromtimestamp(os.path.getmtime(TODAY_FILE), TIMEZONE)
         if mtime.strftime("%Y-%m-%d") != today_str:
             os.replace(TODAY_FILE, f"mqtt_log_{mtime.strftime('%Y-%m-%d')}.csv")
 
+    # 2️⃣ Smazání všech CSV souborů kromě dnešního a včerejšího
     for f in os.listdir("."):
         if f.endswith(".csv") and f not in (
             TODAY_FILE,
@@ -38,8 +40,9 @@ def rotate_logs_if_needed():
         ):
             try:
                 os.remove(f)
-            except:
-                pass
+                print(f"Smazán starý log: {f}")
+            except Exception as e:
+                print(f"Chyba při mazání souboru {f}: {e}")
 
 def ensure_today_header():
     if not os.path.exists(TODAY_FILE):
