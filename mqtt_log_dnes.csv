@@ -240,3 +240,29 @@
 2026-01-14 18:36:48;starymuz@centrum.cz/rele/1/get;1
 2026-01-14 18:45:00;starymuz@centrum.cz/rele/1/set;0
 2026-01-14 18:46:00;;RUN END
+2026-01-14 18:57:49;;RUN START
+2026-01-14 19:00:00;starymuz@centrum.cz/rele/1/set;0
+2026-01-14 19:02:00;starymuz@centrum.cz/rele/1/set;0
+2026-01-14 19:04:00;starymuz@centrum.cz/rele/1/set;0
+2026-01-14 19:15:00;starymuz@centrum.cz/rele/1/set;0
+2026-01-14 19:17:00;starymuz@centrum.cz/rele/1/set;0
+2026-01-14 19:19:00;starymuz@centrum.cz/rele/1/set;0
+2026-01-14 19:21:28;starymuz@centrum.cz/rele/1/get;1
+2026-01-14 19:22:12;starymuz@centrum.cz/rele/1/get;1
+2026-01-14 19:24:16;starymuz@centrum.cz/rele/1/set;1
+2026-01-14 19:24:22;starymuz@centrum.cz/rele/1/set;0
+2026-01-14 19:24:40;starymuz@centrum.cz/rele/1/get;1
+2026-01-14 19:26:06;starymuz@centrum.cz/rele/1/get;1
+2026-01-14 19:30:00;starymuz@centrum.cz/rele/1/set;0
+2026-01-14 19:30:41;starymuz@centrum.cz/rele/1/get;1
+2026-01-14 19:30:41;starymuz@centrum.cz/rele/1/set;0
+2026-01-14 19:31:01;starymuz@centrum.cz/rele/1/get;1
+2026-01-14 19:31:35;starymuz@centrum.cz/rele/1/get;1
+2026-01-14 19:44:47;starymuz@centrum.cz/rele/1/get;1
+2026-01-14 19:45:00;starymuz@centrum.cz/rele/1/set;0
+2026-01-14 19:45:09;starymuz@centrum.cz/rele/1/get;1
+2026-01-14 19:45:09;starymuz@centrum.cz/rele/1/set;0
+2026-01-14 19:45:10;starymuz@centrum.cz/rele/1/get;1
+2026-01-14 19:45:36;starymuz@centrum.cz/rele/1/get;1
+2026-01-14 19:45:57;starymuz@centrum.cz/rele/1/get;1
+2026-01-14 19:46:00;;RUN END
