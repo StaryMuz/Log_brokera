@@ -150,3 +150,10 @@
 2026-01-14 12:30:00;starymuz@centrum.cz/rele/1/set;0
 2026-01-14 12:45:00;starymuz@centrum.cz/rele/1/set;0
 2026-01-14 12:45:59;;RUN END
+2026-01-14 12:53:57;;RUN START
+2026-01-14 13:00:00;starymuz@centrum.cz/rele/1/set;0
+2026-01-14 13:05:47;starymuz@centrum.cz/rele/1/get;1
+2026-01-14 13:15:00;starymuz@centrum.cz/rele/1/set;0
+2026-01-14 13:30:00;starymuz@centrum.cz/rele/1/set;0
+2026-01-14 13:45:00;starymuz@centrum.cz/rele/1/set;0
+2026-01-14 13:46:00;;RUN END
