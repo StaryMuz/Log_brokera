@@ -12,8 +12,8 @@ MQTT_PASS   = os.environ["MQTT_PASS"]
 
 MQTT_PORT = 1883
 
-MQTT_TOPIC_SET = "starymuz@centrum.cz/rele/1/set"
-MQTT_TOPIC_GET = "starymuz@centrum.cz/rele/1/get"
+MQTT_TOPIC_SET = "starymuz@centrum.cz/rele/2/set"
+MQTT_TOPIC_GET = "starymuz@centrum.cz/rele/2/get"
 
 TIMEZONE = pytz.timezone("Europe/Prague")
 SAFETY_SECONDS = 60
