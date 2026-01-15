@@ -12,8 +12,8 @@ MQTT_PASS   = os.environ["MQTT_PASS"]
 
 MQTT_PORT = 1883
 
-MQTT_TOPIC_SET = "starymuz@centrum.cz/rele/2/set"
-MQTT_TOPIC_GET = "starymuz@centrum.cz/rele/2/get"
+MQTT_TOPIC_SET = "starymuz@centrum.cz/rele/2/#"
+# MQTT_TOPIC_GET = "starymuz@centrum.cz/rele/2/get"
 
 TIMEZONE = pytz.timezone("Europe/Prague")
 SAFETY_SECONDS = 60
@@ -63,7 +63,7 @@ def on_connect(client, userdata, flags, reason_code, properties):
     if reason_code == 0:
         client.subscribe([
             (MQTT_TOPIC_SET, 0),
-            (MQTT_TOPIC_GET, 0),
+#            (MQTT_TOPIC_GET, 0),
         ])
         print("Připojeno k MQTT brokeru")
     else:
@@ -88,14 +88,14 @@ def on_message(client, userdata, msg):
             )
 
     # ---- GET: zapisovat pouze hodnotu 1 ----
-    elif msg.topic == MQTT_TOPIC_GET and payload == "1":
-        rotate_logs_if_needed()
-        ensure_today_header()
-        ts = datetime.now(TIMEZONE).strftime("%Y-%m-%d %H:%M:%S")
-        with open(TODAY_FILE, "a", newline="", encoding="utf-8") as f:
-            csv.writer(f, delimiter=";").writerow(
-                [ts, msg.topic, payload]
-            )
+#    elif msg.topic == MQTT_TOPIC_GET and payload == "1":
+#        rotate_logs_if_needed()
+#        ensure_today_header()
+#        ts = datetime.now(TIMEZONE).strftime("%Y-%m-%d %H:%M:%S")
+#        with open(TODAY_FILE, "a", newline="", encoding="utf-8") as f:
+#            csv.writer(f, delimiter=";").writerow(
+#                [ts, msg.topic, payload]
+#            )
 
 # ====== ČASOVÁ LOGIKA ======
 def seconds_until_run_end():
